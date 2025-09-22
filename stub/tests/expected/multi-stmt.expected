@@ -1,0 +1,21 @@
+Prog(
+  Val[x](
+    BinOp[ADD](
+      Token(INT(3))
+      BinOp[MULT](
+        Token(INT(5))
+        Token(INT(2))
+      )
+    )
+  )
+  Val[y](
+    BinOp[ADD](
+      Token(INT(4))
+      Token(ID(x))
+    )
+  )
+  RelOp[GT](
+    Token(ID(x))
+    Token(ID(y))
+  )
+)

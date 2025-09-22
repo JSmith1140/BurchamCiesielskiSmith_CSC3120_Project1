@@ -1,0 +1,9 @@
+Prog(
+  BinOp[MOD](
+    BinOp[MULT](
+      Token(INT(3))
+      Token(INT(2))
+    )
+    Token(INT(4))
+  )
+)

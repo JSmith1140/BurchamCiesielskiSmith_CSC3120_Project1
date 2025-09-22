@@ -1,0 +1,12 @@
+Prog(
+  BinOp[AND](
+    RelOp[LT](
+      Token(INT(2))
+      Token(INT(3))
+    )
+    RelOp[EQ](
+      Token(INT(2))
+      Token(INT(2))
+    )
+  )
+)

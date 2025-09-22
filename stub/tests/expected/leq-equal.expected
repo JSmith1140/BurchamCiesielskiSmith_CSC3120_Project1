@@ -1,0 +1,6 @@
+Prog(
+  RelOp[LTE](
+    Token(INT(5))
+    Token(INT(5))
+  )
+)

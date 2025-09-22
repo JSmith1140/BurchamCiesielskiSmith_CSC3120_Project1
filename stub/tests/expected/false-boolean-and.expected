@@ -1,0 +1,6 @@
+Prog(
+  BinOp[AND](
+    Token(TRUE)
+    Token(FALSE)
+  )
+)

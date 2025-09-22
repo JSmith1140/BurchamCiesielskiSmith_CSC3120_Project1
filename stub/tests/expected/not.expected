@@ -1,0 +1,8 @@
+Prog(
+  BinOp[OR](
+    UnaryOp[NOT](
+      Token(TRUE)
+    )
+    Token(FALSE)
+  )
+)

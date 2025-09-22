@@ -1,0 +1,15 @@
+Prog(
+  BinOp[SUB](
+    BinOp[ADD](
+      BinOp[DIV](
+        Token(REAL(5.2))
+        Token(REAL(0.3))
+      )
+      Token(REAL(.4))
+    )
+    BinOp[MULT](
+      Token(REAL(1.0))
+      Token(REAL(6.0))
+    )
+  )
+)

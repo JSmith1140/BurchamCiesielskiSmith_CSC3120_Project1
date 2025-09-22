@@ -1,0 +1,6 @@
+Prog(
+  RelOp[GTE](
+    Token(INT(5))
+    Token(INT(5))
+  )
+)

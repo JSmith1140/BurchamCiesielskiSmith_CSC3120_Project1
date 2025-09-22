@@ -1,0 +1,12 @@
+Prog(
+  BinOp[AND](
+    RelOp[LT](
+      Token(INT(5))
+      Token(INT(7))
+    )
+    RelOp[GT](
+      Token(INT(7))
+      Token(INT(3))
+    )
+  )
+)

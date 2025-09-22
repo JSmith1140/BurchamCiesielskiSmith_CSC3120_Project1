@@ -1,0 +1,6 @@
+Prog(
+  RelOp[GT](
+    Token(INT(7))
+    Token(INT(5))
+  )
+)

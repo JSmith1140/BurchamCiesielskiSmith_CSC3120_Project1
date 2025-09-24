@@ -25,11 +25,10 @@ import java.util.HashMap;
  * 
  * @author Zach Kissel
  */
-public class Lexer
-{
+public class Lexer {
     // The dictionary of language keywords
     private HashMap<String, TokenType> keywords;
- 
+
     // Stream of characters to generate token stream from.
     private CharacterStream stream;
 
@@ -39,8 +38,7 @@ public class Lexer
      * @param file the file to open for lexical analysis.
      * @throws FileNotFoundException if the file can not be opened.
      */
-    public Lexer(File file) throws FileNotFoundException
-    {
+    public Lexer(File file) throws FileNotFoundException {
         stream = new CharacterStream(file);
         loadKeywords();
     }
@@ -50,8 +48,7 @@ public class Lexer
      * 
      * @param input the input to lexically analyze.
      */
-    public Lexer(String input)
-    {
+    public Lexer(String input) {
         stream = new CharacterStream(input);
         loadKeywords();
     }
@@ -61,24 +58,21 @@ public class Lexer
      * 
      * @return the next token.
      */
-    public Token nextToken()
-    {
+    public Token nextToken() {
         String value = ""; // The value to be associated with the token.
 
         stream.advanceToNonBlank();
-        switch (stream.getCurrentClass())
-        {
+        switch (stream.getCurrentClass()) {
 
             // The state where we are recognizing identifiers.
             // Regex: [A-Za-Z][0-9a-zA-z]*
             case LETTER:
                 value += stream.getCurrentChar();
-                stream.advance();      // advance the stream.
+                stream.advance(); // advance the stream.
 
                 // Read the rest of the identifier.
                 while (stream.getCurrentClass() == CharacterClass.DIGIT
-                        || stream.getCurrentClass() == CharacterClass.LETTER)
-                {
+                        || stream.getCurrentClass() == CharacterClass.LETTER) {
                     value += stream.getCurrentChar();
                     stream.advance();
                 }
@@ -96,8 +90,7 @@ public class Lexer
                 value += stream.getCurrentChar();
                 stream.advance();
 
-                while (stream.getCurrentClass() == CharacterClass.DIGIT)
-                {
+                while (stream.getCurrentClass() == CharacterClass.DIGIT) {
                     value += stream.getCurrentChar();
                     stream.advance();
                 }
@@ -106,8 +99,7 @@ public class Lexer
                 {
                     value += stream.getCurrentChar();
                     stream.advance();
-                    while (stream.getCurrentClass() == CharacterClass.DIGIT)
-                    {
+                    while (stream.getCurrentClass() == CharacterClass.DIGIT) {
                         value += stream.getCurrentChar();
                         stream.advance();
                     }
@@ -150,64 +142,93 @@ public class Lexer
      * 
      * @return the new token.
      */
-    private Token lookup()
-    {
+    private Token lookup() {
         String value = "";
 
-        switch (stream.getCurrentChar())
-        {
-        case '.': // A double with just a leading dot.
-            value += ".";
-            stream.advance();
-           
-            while (stream.getCurrentClass() == CharacterClass.DIGIT)
-            {
-                value += stream.getCurrentChar();
+        switch (stream.getCurrentChar()) {
+            case '.': // A double with just a leading dot.
+                value += ".";
                 stream.advance();
-            }
-            stream.skipNextAdvance();
-            return new Token(TokenType.REAL, value);
-        case '+':
-            return new Token(TokenType.ADD, "+");
-        case '=':
-            return new Token(TokenType.EQ, "=");
-        case '!':
-            stream.advance();
-            if (stream.getCurrentChar() == '=')
-                return new Token(TokenType.NEQ, "!=");
-            else
-            {
+
+                while (stream.getCurrentClass() == CharacterClass.DIGIT) {
+                    value += stream.getCurrentChar();
+                    stream.advance();
+                }
                 stream.skipNextAdvance();
-                return new Token(TokenType.UNKNOWN, "");
-            }
-        case '>':
-            stream.advance();
-            if (stream.getCurrentChar() == '=')
-                return new Token(TokenType.GTE, ">=");
-            else
-            {
-                stream.skipNextAdvance();
-                return new Token(TokenType.GT, ">");
-            }
-        case '<':
-            stream.advance();
-            if (stream.getCurrentChar() == '=')
-                return new Token(TokenType.LTE, "<=");
-            else
-            {
-                stream.skipNextAdvance();
-                return new Token(TokenType.LT, "<");
-            }
-        default:
-            return new Token(TokenType.UNKNOWN, String.valueOf(stream.getCurrentChar()));
+                return new Token(TokenType.REAL, value);
+            case '+':
+                return new Token(TokenType.ADD, "+");
+            case '=':
+                return new Token(TokenType.EQ, "=");
+            case '!':
+                stream.advance();
+                if (stream.getCurrentChar() == '=')
+                    return new Token(TokenType.NEQ, "!=");
+                else {
+                    stream.skipNextAdvance();
+                    return new Token(TokenType.UNKNOWN, "");
+                }
+            case '>':
+                stream.advance();
+                if (stream.getCurrentChar() == '=')
+                    return new Token(TokenType.GTE, ">=");
+                else {
+                    stream.skipNextAdvance();
+                    return new Token(TokenType.GT, ">");
+                }
+            case '<':
+                stream.advance();
+                if (stream.getCurrentChar() == '=')
+                    return new Token(TokenType.LTE, "<=");
+                else {
+                    stream.skipNextAdvance();
+                    return new Token(TokenType.LT, "<");
+                }
+            case ';':
+                stream.advance();
+                return new Token(TokenType.SEMI, ";");
+            case '(':
+                stream.advance();
+                if (stream.getCurrentChar() == '*') {
+                    // Start of comment
+                    stream.advance(); // move past '*'
+                    StringBuilder comment = new StringBuilder();
+
+                    // Keep reading until we hit "*)"
+                    while (true) {
+                        if (stream.getCurrentClass() == CharacterClass.END) {
+                            // Unterminated comment, bail out
+                            break;
+                        }
+
+                        if (stream.getCurrentChar() == '*') {
+                            stream.advance();
+                            if (stream.getCurrentChar() == ')') {
+                                stream.advance(); // consume ')'
+                                break; // end of comment
+                            } else {
+                                comment.append('*');
+                                continue;
+                            }
+                        }
+                        comment.append(stream.getCurrentChar());
+                        stream.advance();
+                    }
+                    return new Token(TokenType.COMMENT, comment.toString());
+                } else {
+                    // Just a left paren
+                    stream.skipNextAdvance();
+                    return new Token(TokenType.LPAREN, "(");
+                }
+            default:
+                return new Token(TokenType.UNKNOWN, String.valueOf(stream.getCurrentChar()));
         }
     }
 
     /**
      * Sets up the dictionary with all of the keywords.
      */
-    private void loadKeywords()
-    {
+    private void loadKeywords() {
         keywords = new HashMap<String, TokenType>();
     }
 }

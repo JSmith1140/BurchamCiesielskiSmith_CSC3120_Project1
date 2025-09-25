@@ -184,6 +184,15 @@ public class Lexer {
                     stream.skipNextAdvance();
                     return new Token(TokenType.LT, "<");
                 }
+            case ':':
+            stream.advance();
+            if (stream.getCurrentChar() == '=')
+                return new Token(TokenType.ASSIGN, ":="); // Add Assign Token to Lexer
+            else 
+            {
+                stream.skipNextAdvance();
+                return new Token(TokenType.UNKNOWN, "");
+            }
             case ';':
                 stream.advance();
                 return new Token(TokenType.SEMI, ";");
@@ -230,5 +239,6 @@ public class Lexer {
      */
     private void loadKeywords() {
         keywords = new HashMap<String, TokenType>();
+        keywords.put("val", TokenType.VAL); // VAL Token
     }
 }

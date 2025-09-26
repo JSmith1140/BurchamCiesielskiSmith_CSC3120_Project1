@@ -158,6 +158,12 @@ public class Lexer {
                 return new Token(TokenType.REAL, value);
             case '+':
                 return new Token(TokenType.ADD, "+");
+                case '-':
+                return new Token(TokenType.SUB, "-");
+            case '*':
+                return new Token(TokenType.MULT, "*");
+            case '/':
+                return new Token(TokenType.DIV, "/");
             case '=':
                 return new Token(TokenType.EQ, "=");
             case '!':
@@ -229,6 +235,9 @@ public class Lexer {
                     stream.skipNextAdvance();
                     return new Token(TokenType.LPAREN, "(");
                 }
+            case ')':
+                stream.advance();
+                return new Token(TokenType.RPAREN, ")");
             default:
                 return new Token(TokenType.UNKNOWN, String.valueOf(stream.getCurrentChar()));
         }
@@ -239,6 +248,13 @@ public class Lexer {
      */
     private void loadKeywords() {
         keywords = new HashMap<String, TokenType>();
-        keywords.put("val", TokenType.VAL); // VAL Token
+        keywords.put("val", TokenType.VAL);
+        keywords.put("not", TokenType.NOT);
+        keywords.put("and", TokenType.AND);
+        keywords.put("or", TokenType.OR);
+        keywords.put("mod", TokenType.MOD);
+        keywords.put("true", TokenType.TRUE);
+        keywords.put("false", TokenType.FALSE);
     }
 }
+    

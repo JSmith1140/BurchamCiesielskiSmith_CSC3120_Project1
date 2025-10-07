@@ -28,6 +28,7 @@ import ast.nodes.ProgNode;
 import lexer.Lexer;
 import lexer.Token;
 import lexer.TokenType;
+
 /**
  * <p>
  * Parser for the MFL language. This is largely private methods where
@@ -68,7 +69,7 @@ public class MFLParser extends Parser {
      * @param str the code to evaluate.
      */
     public MFLParser(String str) {
-      super(new Lexer(str));
+        super(new Lexer(str));
     }
 
     /**
@@ -78,35 +79,82 @@ public class MFLParser extends Parser {
      * @throws ParseException when parsing fails.
      */
     public SyntaxTree parse() throws ParseException {
-    nextToken(); // Get the first token
-    
-    // Parse the expression (could be relational, unary, or simple factor)
-    SyntaxNode expr = parseUnaryOp();
-    
-    // Create ProgNode with the expression
-    LinkedList<SyntaxNode> statements = new LinkedList<>();
-    statements.add(expr);
-    ProgNode progNode = new ProgNode(getCurrLine(), statements);
-    
-    return new SyntaxTree(progNode);
-}
-private SyntaxNode parseRelOp(SyntaxNode left) throws ParseException {
-    // Check for relational operators
-    if (tokenIs(TokenType.LT) || tokenIs(TokenType.LTE) || 
-        tokenIs(TokenType.GT) || tokenIs(TokenType.GTE) ||
-        tokenIs(TokenType.EQ) || tokenIs(TokenType.NEQ)) {
+        nextToken(); // Get the first token
         
-        TokenType operator = getCurrToken().getType();
-        nextToken(); // consume the operator
+        // Parse the expression (could be relational, unary, or simple factor)
+        SyntaxNode expr = parseUnaryOp();
         
-        SyntaxNode right = parseFactor();
-        return new RelOpNode(getCurrLine(), left, right, operator);
+        // Create ProgNode with the expression
+        LinkedList<SyntaxNode> statements = new LinkedList<>();
+        statements.add(expr);
+        ProgNode progNode = new ProgNode(getCurrLine(), statements);
+        
+        return new SyntaxTree(progNode);
     }
-    
-    return left;
-}
-    /************
-     * Evaluation methods to constrct the AST associated with the non-terminals
-     ***********/
 
-    
+    /**
+     * Parses a relational expression according to the grammar rule:
+     * <rexpr> → <mexpr> [ ( < | > | >= | <= | = | != ) <mexpr> ]
+     * This method handles the relational operator part [...] of the rule.
+     */
+    private SyntaxNode parseRelOp(SyntaxNode left) throws ParseException {
+        // Check for relational operators
+        if (tokenIs(TokenType.LT) || tokenIs(TokenType.LTE) || 
+            tokenIs(TokenType.GT) || tokenIs(TokenType.GTE) ||
+            tokenIs(TokenType.EQ) || tokenIs(TokenType.NEQ)) {
+            
+            TokenType operator = getCurrToken().getType();
+            nextToken(); // consume the operator
+            
+            SyntaxNode right = parseFactor();
+            return new RelOpNode(getCurrLine(), left, right, operator);
+        }
+        
+        return left;
+    }
+
+    /**
+     * Parses a factor which could be a basic token or parenthesized expression
+     */
+    private SyntaxNode parseFactor() throws ParseException {
+        if (tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE) || 
+            tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) || 
+            tokenIs(TokenType.ID)) {
+            Token token = getCurrToken();
+            nextToken();
+            return new TokenNode(getCurrLine(), token);
+        }
+        
+        if (tokenIs(TokenType.LPAREN)) {
+            nextToken(); // consume '('
+            SyntaxNode expr = parseUnaryOp();
+            if (!tokenIs(TokenType.RPAREN)) {
+                logError("Expected ')'");
+                throw new ParseException();
+            }
+            nextToken(); // consume ')'
+            return expr;
+        }
+        
+        logError("Expected a value or '('");
+        throw new ParseException();
+    }
+
+    /**
+     * Parses a unary operation according to the grammar rule:
+     * <term> → not <rexpr> | ...
+     * This method handles the 'not' part of the rule.
+     */
+    private SyntaxNode parseUnaryOp() throws ParseException {
+        if (tokenIs(TokenType.NOT)) {
+            long line = getCurrLine();
+            nextToken(); // consume 'not'
+            SyntaxNode operand = parseFactor();
+            return new UnaryOpNode(line, operand, TokenType.NOT);
+        }
+        
+        // If not a unary operation, try parsing as a relational expression
+        SyntaxNode left = parseFactor();
+        return parseRelOp(left);
+    }
+}

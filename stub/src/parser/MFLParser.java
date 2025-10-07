@@ -19,8 +19,15 @@ package parser;
 import java.io.File;
 import java.io.FileNotFoundException;
 import ast.SyntaxTree;
+import java.util.LinkedList;
+import ast.nodes.SyntaxNode;
+import ast.nodes.RelOpNode;
+import ast.nodes.TokenNode;
+import ast.nodes.UnaryOpNode;
+import ast.nodes.ProgNode;
 import lexer.Lexer;
-
+import lexer.Token;
+import lexer.TokenType;
 /**
  * <p>
  * Parser for the MFL language. This is largely private methods where
@@ -71,9 +78,33 @@ public class MFLParser extends Parser {
      * @throws ParseException when parsing fails.
      */
     public SyntaxTree parse() throws ParseException {
-       return null;
+    nextToken(); // Get the first token
+    
+    // Parse the expression (could be relational, unary, or simple factor)
+    SyntaxNode expr = parseUnaryOp();
+    
+    // Create ProgNode with the expression
+    LinkedList<SyntaxNode> statements = new LinkedList<>();
+    statements.add(expr);
+    ProgNode progNode = new ProgNode(getCurrLine(), statements);
+    
+    return new SyntaxTree(progNode);
+}
+private SyntaxNode parseRelOp(SyntaxNode left) throws ParseException {
+    // Check for relational operators
+    if (tokenIs(TokenType.LT) || tokenIs(TokenType.LTE) || 
+        tokenIs(TokenType.GT) || tokenIs(TokenType.GTE) ||
+        tokenIs(TokenType.EQ) || tokenIs(TokenType.NEQ)) {
+        
+        TokenType operator = getCurrToken().getType();
+        nextToken(); // consume the operator
+        
+        SyntaxNode right = parseFactor();
+        return new RelOpNode(getCurrLine(), left, right, operator);
     }
-
+    
+    return left;
+}
     /************
      * Evaluation methods to constrct the AST associated with the non-terminals
      ***********/

@@ -24,6 +24,7 @@ import ast.nodes.SyntaxNode;
 import ast.nodes.RelOpNode;
 import ast.nodes.TokenNode;
 import ast.nodes.UnaryOpNode;
+import ast.nodes.BinOpNode;
 import ast.nodes.ProgNode;
 import lexer.Lexer;
 import lexer.Token;
@@ -37,14 +38,21 @@ import lexer.TokenType;
  * production associated with a non-terminal.
  * </p>
  * <p>
- * Each of the private methods operates on the token stream. It is important to 
- * remember that all of our non-terminal processing methods maintain the invariant
- * that each method leaves the concludes such that the next unprocessed token is at
- * the front of the token stream. This means each method can assume the current token
- * has not yet been processed when the method begins. The methods {@code checkMatch}
- * and {@code match} are methods that maintain this invariant in the case of a match. 
- * The method {@code tokenIs} does NOT advnace the token stream. To advance the token
- * stream the {@code nextTok} method can be used. In the rare cases that the token 
+ * Each of the private methods operates on the token stream. It is important to
+ * remember that all of our non-terminal processing methods maintain the
+ * invariant
+ * that each method leaves the concludes such that the next unprocessed token is
+ * at
+ * the front of the token stream. This means each method can assume the current
+ * token
+ * has not yet been processed when the method begins. The methods
+ * {@code checkMatch}
+ * and {@code match} are methods that maintain this invariant in the case of a
+ * match.
+ * The method {@code tokenIs} does NOT advnace the token stream. To advance the
+ * token
+ * stream the {@code nextTok} method can be used. In the rare cases that the
+ * token
  * at the head of the stream must be accessed directly, the {@code getCurrToken}
  * method can be used.
  * </p>
@@ -80,15 +88,15 @@ public class MFLParser extends Parser {
      */
     public SyntaxTree parse() throws ParseException {
         nextToken(); // Get the first token
-        
+
         // Parse the expression (could be relational, unary, or simple factor)
-        SyntaxNode expr = parseUnaryOp();
-        
+        SyntaxNode expr = parseExpr();
+
         // Create ProgNode with the expression
         LinkedList<SyntaxNode> statements = new LinkedList<>();
         statements.add(expr);
         ProgNode progNode = new ProgNode(getCurrLine(), statements);
-        
+
         return new SyntaxTree(progNode);
     }
 
@@ -99,17 +107,71 @@ public class MFLParser extends Parser {
      */
     private SyntaxNode parseRelOp(SyntaxNode left) throws ParseException {
         // Check for relational operators
-        if (tokenIs(TokenType.LT) || tokenIs(TokenType.LTE) || 
-            tokenIs(TokenType.GT) || tokenIs(TokenType.GTE) ||
-            tokenIs(TokenType.EQ) || tokenIs(TokenType.NEQ)) {
-            
+        if (tokenIs(TokenType.LT) || tokenIs(TokenType.LTE) ||
+                tokenIs(TokenType.GT) || tokenIs(TokenType.GTE) ||
+                tokenIs(TokenType.EQ) || tokenIs(TokenType.NEQ)) {
+
             TokenType operator = getCurrToken().getType();
             nextToken(); // consume the operator
-            
+
             SyntaxNode right = parseFactor();
             return new RelOpNode(getCurrLine(), left, right, operator);
         }
-        
+
+        return left;
+    }
+
+    /**
+     * Parses an expression according to the grammar rule:
+     * <expr> → <rexpr> { ( and | or ) <rexpr> }
+     * Handles logical binary operations (and/or).
+     */
+    private SyntaxNode parseExpr() throws ParseException {
+        SyntaxNode left = parseUnaryOp(); // start with a unary/relational expression
+
+        while (tokenIs(TokenType.AND) || tokenIs(TokenType.OR)) {
+            TokenType op = getCurrToken().getType();
+            nextToken(); // consume 'and' or 'or'
+            SyntaxNode right = parseUnaryOp(); // parse the right-hand side
+            left = new BinOpNode(getCurrLine(), left, right, op);
+        }
+
+        return left;
+    }
+
+    /**
+     * Parses a multiplicative expression:
+     * <term> → <factor> { ( * | / ) <factor> }
+     * Handles multiplication and division.
+     */
+    private SyntaxNode parseTerm() throws ParseException {
+        SyntaxNode left = parseFactor();
+
+        while (tokenIs(TokenType.MULT) || tokenIs(TokenType.DIV)) {
+            TokenType op = getCurrToken().getType();
+            nextToken(); // consume '*' or '/'
+            SyntaxNode right = parseFactor();
+            left = new BinOpNode(getCurrLine(), left, right, op);
+        }
+
+        return left;
+    }
+
+    /**
+     * Parses an additive expression:
+     * <mexpr> → <term> { ( + | - ) <term> }
+     * Handles addition and subtraction.
+     */
+    private SyntaxNode parseMExpr() throws ParseException {
+        SyntaxNode left = parseTerm();
+
+        while (tokenIs(TokenType.ADD) || tokenIs(TokenType.SUB)) {
+            TokenType op = getCurrToken().getType();
+            nextToken(); // consume '+' or '-'
+            SyntaxNode right = parseTerm();
+            left = new BinOpNode(getCurrLine(), left, right, op);
+        }
+
         return left;
     }
 
@@ -117,14 +179,14 @@ public class MFLParser extends Parser {
      * Parses a factor which could be a basic token or parenthesized expression
      */
     private SyntaxNode parseFactor() throws ParseException {
-        if (tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE) || 
-            tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) || 
-            tokenIs(TokenType.ID)) {
+        if (tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE) ||
+                tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) ||
+                tokenIs(TokenType.ID)) {
             Token token = getCurrToken();
             nextToken();
             return new TokenNode(getCurrLine(), token);
         }
-        
+
         if (tokenIs(TokenType.LPAREN)) {
             nextToken(); // consume '('
             SyntaxNode expr = parseUnaryOp();
@@ -135,7 +197,7 @@ public class MFLParser extends Parser {
             nextToken(); // consume ')'
             return expr;
         }
-        
+
         logError("Expected a value or '('");
         throw new ParseException();
     }
@@ -152,7 +214,7 @@ public class MFLParser extends Parser {
             SyntaxNode operand = parseFactor();
             return new UnaryOpNode(line, operand, TokenType.NOT);
         }
-        
+
         // If not a unary operation, try parsing as a relational expression
         SyntaxNode left = parseFactor();
         return parseRelOp(left);

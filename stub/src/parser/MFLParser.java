@@ -86,18 +86,57 @@ public class MFLParser extends Parser {
      * @return the abstract syntax tree representing the parsed program.
      * @throws ParseException when parsing fails.
      */
+    @Override
     public SyntaxTree parse() throws ParseException {
-        nextToken(); // Get the first token
+        nextToken();             
+        SyntaxNode root = parseProg(); 
+        match(TokenType.EOF, "EOF"); 
+        return new SyntaxTree(root);
+    }
 
-        // Parse the expression (could be relational, unary, or simple factor)
-        SyntaxNode expr = parseExpr();
-
-        // Create ProgNode with the expression
+    /**
+     * Parses a <prog>:
+     * <prog> → val <id> ; { <val ; }
+    */
+    private SyntaxNode parseProg() throws ParseException {
         LinkedList<SyntaxNode> statements = new LinkedList<>();
-        statements.add(expr);
-        ProgNode progNode = new ProgNode(getCurrLine(), statements);
 
-        return new SyntaxTree(progNode);
+        statements.add(parseVal());
+        match(TokenType.SEMI, ";");
+
+        while (!tokenIs(TokenType.EOF)) {
+            statements.add(parseVal());
+            match(TokenType.SEMI, ";");
+        }
+
+        return new ProgNode(getCurrLine(), statements);
+    }
+
+    /**
+     * Parses a <val>:
+     * <val> → val <id> := <expr> | <expr>
+    */
+    private SyntaxNode parseVal() throws ParseException {
+        // Case 1: "val <id> := <expr>"
+        if (tokenIs(TokenType.VAL)) {
+            nextToken(); // consume 'val'
+
+            if (!tokenIs(TokenType.ID)) {
+                logError("Expected identifier after 'val'");
+                throw new ParseException();
+            }
+
+            Token id = getCurrToken();
+            nextToken(); // consume identifier
+
+            match(TokenType.ASSIGN, ":="); // ':='
+
+            SyntaxNode expr = parseExpr();
+            return new BinOpNode(getCurrLine(), new TokenNode(getCurrLine(), id), expr, TokenType.ASSIGN);
+        }
+
+        // Case 2: just an expression <expr>
+        return parseExpr();
     }
 
     /**
@@ -114,7 +153,7 @@ public class MFLParser extends Parser {
             TokenType operator = getCurrToken().getType();
             nextToken(); // consume the operator
 
-            SyntaxNode right = parseFactor();
+            SyntaxNode right = parseMExpr();
             return new RelOpNode(getCurrLine(), left, right, operator);
         }
 

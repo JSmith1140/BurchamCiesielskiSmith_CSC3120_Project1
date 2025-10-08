@@ -103,11 +103,11 @@ public class MFLParser extends Parser {
         LinkedList<SyntaxNode> statements = new LinkedList<>();
 
         statements.add(parseVal());
-        match(TokenType.SEMI, ";");
-
-        while (!tokenIs(TokenType.EOF)) {
-            statements.add(parseVal());
+        while (tokenIs(TokenType.SEMI)) {
             match(TokenType.SEMI, ";");
+            if (!tokenIs(TokenType.EOF)) {
+                statements.add(parseVal());
+            }
         }
 
         return new ProgNode(getCurrLine(), statements);
@@ -186,17 +186,26 @@ public class MFLParser extends Parser {
      * Handles multiplication and division.
      */
     private SyntaxNode parseTerm() throws ParseException {
+        long line = getCurrLine();
+
+        if (tokenIs(TokenType.NOT)) {
+            nextToken(); 
+            SyntaxNode expr = parseRelOp(parseMExpr()); // parse <rexpr>
+            return new UnaryOpNode(line, expr, TokenType.NOT);
+        }
+
         SyntaxNode left = parseFactor();
 
-        while (tokenIs(TokenType.MULT) || tokenIs(TokenType.DIV)) {
+        while (tokenIs(TokenType.MULT) || tokenIs(TokenType.DIV) || tokenIs(TokenType.MOD)) {
             TokenType op = getCurrToken().getType();
-            nextToken(); // consume '*' or '/'
+            nextToken();
             SyntaxNode right = parseFactor();
             left = new BinOpNode(getCurrLine(), left, right, op);
         }
 
         return left;
     }
+
 
     /**
      * Parses an additive expression:
@@ -220,44 +229,26 @@ public class MFLParser extends Parser {
      * Parses a factor which could be a basic token or parenthesized expression
      */
     private SyntaxNode parseFactor() throws ParseException {   
-    long line = getCurrLine();
+        long line = getCurrLine();
 
-    // Match boolean, int, real, or identifier tokens
-    if (tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE) ||
-        tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) ||
-        tokenIs(TokenType.ID)) 
-    {
-        Token token = getCurrToken();
-        nextToken(); // consume the token
-        return new TokenNode(line, token);
-    } 
-    // Otherwise, expect a parenthesized expression
-    else if (checkMatch(TokenType.LPAREN)) {
-        SyntaxNode expr = parseExpr();
-        match(TokenType.RPAREN, ")"); // must match closing paren
-        return expr;
-    } 
-    else {
-        logError("Expected a value or '('");
-        throw new ParseException();
-    }
-}
-
-    /**
-     * Parses a unary operation according to the grammar rule:
-     * <term> → not <rexpr> | ...
-     * This method handles the 'not' part of the rule.
-     */
-    private SyntaxNode parseUnaryOp() throws ParseException {
-        if (tokenIs(TokenType.NOT)) {
-            long line = getCurrLine();
-            nextToken(); // consume 'not'
-            SyntaxNode operand = parseFactor();
-            return new UnaryOpNode(line, operand, TokenType.NOT);
+        // Match boolean, int, real, or identifier tokens
+        if (tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE) ||
+            tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) ||
+            tokenIs(TokenType.ID)) 
+        {
+            Token token = getCurrToken();
+            nextToken(); // consume the token
+            return new TokenNode(line, token);
+        } 
+        // Otherwise, expect a parenthesized expression
+        else if (checkMatch(TokenType.LPAREN)) {
+            SyntaxNode expr = parseExpr();
+            match(TokenType.RPAREN, ")"); // must match closing paren
+            return expr;
+        } 
+        else {
+            logError("Expected a value or '('");
+            throw new ParseException();
         }
-
-        // If not a unary operation, try parsing as a relational expression
-        SyntaxNode left = parseMExpr();
-        return parseRelOp(left);
     }
 }

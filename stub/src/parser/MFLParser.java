@@ -24,6 +24,7 @@ import ast.nodes.SyntaxNode;
 import ast.nodes.RelOpNode;
 import ast.nodes.TokenNode;
 import ast.nodes.UnaryOpNode;
+import ast.nodes.ValNode;
 import ast.nodes.BinOpNode;
 import ast.nodes.ProgNode;
 import lexer.Lexer;
@@ -132,7 +133,7 @@ public class MFLParser extends Parser {
             match(TokenType.ASSIGN, ":="); // ':='
 
             SyntaxNode expr = parseExpr();
-            return new BinOpNode(getCurrLine(), new TokenNode(getCurrLine(), id), expr, TokenType.ASSIGN);
+            return new ValNode(getCurrLine(), id, expr);
         }
 
         // Case 2: just an expression <expr>

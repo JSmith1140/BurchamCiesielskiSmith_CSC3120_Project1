@@ -88,7 +88,7 @@ public class MFLParser extends Parser {
      */
     @Override
     public SyntaxTree parse() throws ParseException {
-        nextToken();             
+        nextToken();          
         SyntaxNode root = parseProg(); 
         match(TokenType.EOF, "EOF"); 
         return new SyntaxTree(root);
@@ -140,6 +140,24 @@ public class MFLParser extends Parser {
     }
 
     /**
+     * Parses an expression according to the grammar rule:
+     * <expr> → <rexpr> { ( and | or ) <rexpr> }
+     * Handles logical binary operations (and/or).
+     */
+    private SyntaxNode parseExpr() throws ParseException {
+        SyntaxNode left = parseRelOp(parseMExpr());
+
+        while (tokenIs(TokenType.AND) || tokenIs(TokenType.OR)) {
+            TokenType op = getCurrToken().getType();
+            nextToken();
+            SyntaxNode right = parseRelOp(parseMExpr());
+            left = new BinOpNode(getCurrLine(), left, right, op);
+        }
+
+        return left;
+    }
+
+    /**
      * Parses a relational expression according to the grammar rule:
      * <rexpr> → <mexpr> [ ( < | > | >= | <= | = | != ) <mexpr> ]
      * This method handles the relational operator part [...] of the rule.
@@ -160,23 +178,6 @@ public class MFLParser extends Parser {
         return left;
     }
 
-    /**
-     * Parses an expression according to the grammar rule:
-     * <expr> → <rexpr> { ( and | or ) <rexpr> }
-     * Handles logical binary operations (and/or).
-     */
-    private SyntaxNode parseExpr() throws ParseException {
-        SyntaxNode left = parseUnaryOp(); // start with a unary/relational expression
-
-        while (tokenIs(TokenType.AND) || tokenIs(TokenType.OR)) {
-            TokenType op = getCurrToken().getType();
-            nextToken(); // consume 'and' or 'or'
-            SyntaxNode right = parseUnaryOp(); // parse the right-hand side
-            left = new BinOpNode(getCurrLine(), left, right, op);
-        }
-
-        return left;
-    }
 
     /**
      * Parses a multiplicative expression:
@@ -217,29 +218,29 @@ public class MFLParser extends Parser {
     /**
      * Parses a factor which could be a basic token or parenthesized expression
      */
-    private SyntaxNode parseFactor() throws ParseException {
-        if (tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE) ||
-                tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) ||
-                tokenIs(TokenType.ID)) {
-            Token token = getCurrToken();
-            nextToken();
-            return new TokenNode(getCurrLine(), token);
-        }
+    private SyntaxNode parseFactor() throws ParseException {   
+    long line = getCurrLine();
 
-        if (tokenIs(TokenType.LPAREN)) {
-            nextToken(); // consume '('
-            SyntaxNode expr = parseUnaryOp();
-            if (!tokenIs(TokenType.RPAREN)) {
-                logError("Expected ')'");
-                throw new ParseException();
-            }
-            nextToken(); // consume ')'
-            return expr;
-        }
-
+    // Match boolean, int, real, or identifier tokens
+    if (tokenIs(TokenType.TRUE) || tokenIs(TokenType.FALSE) ||
+        tokenIs(TokenType.INT) || tokenIs(TokenType.REAL) ||
+        tokenIs(TokenType.ID)) 
+    {
+        Token token = getCurrToken();
+        nextToken(); // consume the token
+        return new TokenNode(line, token);
+    } 
+    // Otherwise, expect a parenthesized expression
+    else if (checkMatch(TokenType.LPAREN)) {
+        SyntaxNode expr = parseExpr();
+        match(TokenType.RPAREN, ")"); // must match closing paren
+        return expr;
+    } 
+    else {
         logError("Expected a value or '('");
         throw new ParseException();
     }
+}
 
     /**
      * Parses a unary operation according to the grammar rule:
@@ -255,7 +256,7 @@ public class MFLParser extends Parser {
         }
 
         // If not a unary operation, try parsing as a relational expression
-        SyntaxNode left = parseFactor();
+        SyntaxNode left = parseMExpr();
         return parseRelOp(left);
     }
 }
